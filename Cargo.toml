@@ -1,0 +1,4 @@
+[workspace]
+members = ["cli", "manifest"]
+
+resolver = "3"
