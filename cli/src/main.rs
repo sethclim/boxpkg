@@ -22,11 +22,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// does testing things
-    Test {
-        /// lists test values
+    Init {
         #[arg(short, long)]
-        list: bool,
+        path: bool,
+    },
+    Add {
+        #[arg(short, long)]
+        path: bool,
+    },
+    Install {
+        #[arg(short, long)]
+        path: bool,
     },
 }
 
@@ -44,21 +50,35 @@ fn main() {
 
     // You can see how many times a particular flag or argument occurred
     // Note, only flags can have multiple occurrences
-    match cli.debug {
-        0 => println!("Debug mode is off"),
-        1 => println!("Debug mode is kind of on"),
-        2 => println!("Debug mode is on"),
-        _ => println!("Don't be crazy"),
-    }
+    // match cli.debug {
+    //     0 => println!("Debug mode is off"),
+    //     1 => println!("Debug mode is kind of on"),
+    //     2 => println!("Debug mode is on"),
+    //     _ => println!("Don't be crazy"),
+    // }
 
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
-        Some(Commands::Test { list }) => {
-            if *list {
-                println!("Printing testing lists...");
+        Some(Commands::Init { path }) => {
+            if *path {
+                println!("initializing...");
             } else {
-                println!("Not printing testing lists...");
+                println!("Not initializing...");
+            }
+        }
+        Some(Commands::Add { path }) => {
+            if *path {
+                println!("Adding...");
+            } else {
+                println!("Not adding...");
+            }
+        }
+        Some(Commands::Install { path }) => {
+            if *path {
+                println!("installing...");
+            } else {
+                println!("Not installing...");
             }
         }
         None => {}
