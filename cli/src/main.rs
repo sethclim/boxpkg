@@ -2,6 +2,10 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+use serde::Serialize;
+// use std::fs::File;
+// use std::io::Write;
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -62,7 +66,7 @@ fn main() {
     match &cli.command {
         Some(Commands::Init { path }) => {
             if *path {
-                println!("initializing...");
+                let _ = init();
             } else {
                 println!("Not initializing...");
             }
@@ -85,4 +89,46 @@ fn main() {
     }
 
     // Continued program logic goes here...
+    #[derive(Serialize)]
+    struct Project {
+        name: String,
+        version: String,
+    }
+
+    #[derive(Serialize)]
+    struct Manifest {
+        project: Project,
+        dependencies: std::collections::HashMap<String, String>,
+    }
+
+    // #[derive(Serialize)]
+    // struct Config {
+    //     name: String,
+    //     version: String,
+    //     authors: Vec<String>,
+    //     debug: bool,
+    // }
+
+    fn init() -> Result<(), Box<dyn std::error::Error>> {
+        println!("initializing...");
+
+        let project = Project {
+            name: "myproject".into(),
+            version: "0.1.0".into(),
+        };
+
+        let manifest = Manifest {
+            project,
+            dependencies: std::collections::HashMap::new(),
+        };
+
+        // Serialize to a TOML string
+        let toml_string = toml::to_string_pretty(&manifest)?;
+
+        // Write to a file
+        std::fs::write("mypkg.toml", toml_string)?;
+
+        println!("mypkg.toml written successfully.");
+        Ok(())
+    }
 }
