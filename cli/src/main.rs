@@ -126,9 +126,13 @@ fn main() {
         let toml_string = toml::to_string_pretty(&manifest)?;
 
         // Write to a file
-        std::fs::write("mypkg.toml", toml_string)?;
+        std::fs::write("./temp/mypkg.toml", toml_string)?;
 
         println!("mypkg.toml written successfully.");
+
+        std::fs::create_dir("./temp/.box")?;
+        std::fs::create_dir_all("./temp/.box/cache")?;
+
         Ok(())
     }
 }
