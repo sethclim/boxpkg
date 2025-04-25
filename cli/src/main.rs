@@ -31,8 +31,7 @@ enum Commands {
         path: bool,
     },
     Add {
-        #[arg(short, long)]
-        path: bool,
+        name: Option<String>,
     },
     Install {
         #[arg(short, long)]
@@ -52,6 +51,16 @@ fn main() {
         println!("Value for config: {}", config_path.display());
     }
 
+    let project = Project {
+        name: "myproject".into(),
+        version: "0.1.0".into(),
+    };
+
+    let manifest: Manifest = Manifest {
+        project,
+        dependencies: std::collections::HashMap::new(),
+    };
+
     // You can see how many times a particular flag or argument occurred
     // Note, only flags can have multiple occurrences
     // match cli.debug {
@@ -66,17 +75,13 @@ fn main() {
     match &cli.command {
         Some(Commands::Init { path }) => {
             if *path {
-                let _ = init();
+                let _ = init(manifest);
             } else {
                 println!("Not initializing...");
             }
         }
-        Some(Commands::Add { path }) => {
-            if *path {
-                println!("Adding...");
-            } else {
-                println!("Not adding...");
-            }
+        Some(Commands::Add { name }) => {
+            let _ = add(name, manifest);
         }
         Some(Commands::Install { path }) => {
             if *path {
@@ -109,18 +114,8 @@ fn main() {
     //     debug: bool,
     // }
 
-    fn init() -> Result<(), Box<dyn std::error::Error>> {
+    fn init(manifest: Manifest) -> Result<(), Box<dyn std::error::Error>> {
         println!("initializing...");
-
-        let project = Project {
-            name: "myproject".into(),
-            version: "0.1.0".into(),
-        };
-
-        let manifest = Manifest {
-            project,
-            dependencies: std::collections::HashMap::new(),
-        };
 
         // Serialize to a TOML string
         let toml_string = toml::to_string_pretty(&manifest)?;
@@ -133,6 +128,26 @@ fn main() {
         std::fs::create_dir("./temp/.box")?;
         std::fs::create_dir_all("./temp/.box/cache")?;
 
+        Ok(())
+    }
+
+    fn add(
+        name: &Option<String>,
+        mut manifest: Manifest,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(name) = name {
+            println!("Adding... {}", name);
+            manifest
+                .dependencies
+                .insert(name.to_string(), "v1.0.0".to_string());
+
+            let toml_string = toml::to_string_pretty(&manifest)?;
+
+            // Write to a file
+            std::fs::write("./temp/mypkg.toml", toml_string)?;
+
+            println!("mypkg.toml written successfully.");
+        }
         Ok(())
     }
 }
