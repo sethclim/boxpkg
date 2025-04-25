@@ -6,6 +6,8 @@ use serde::Serialize;
 // use std::fs::File;
 // use std::io::Write;
 
+use box_core::test;
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -60,6 +62,8 @@ fn main() {
         project,
         dependencies: std::collections::HashMap::new(),
     };
+
+    test();
 
     // You can see how many times a particular flag or argument occurred
     // Note, only flags can have multiple occurrences

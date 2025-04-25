@@ -1,6 +1,8 @@
 [package]
-name = "manifest"
+name = "box_core"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+os_info = "3.10.0"
+sha2 = "0.10.8"

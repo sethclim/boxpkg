@@ -7,3 +7,4 @@ edition = "2024"
 clap = { version = "4.5.37", features = ["derive"] }
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.20"
+box_core = { path = "../box_core" }
