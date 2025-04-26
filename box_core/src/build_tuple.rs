@@ -5,12 +5,10 @@ use std::collections::BTreeMap;
 pub struct BuildTuple {
     pub package: String,
     pub package_version: String,
-
-    pub python_version: String,   // e.g. "3.11"
-    pub platform: String,         // e.g. "windows-x86_64", "linux-aarch64"
-    pub abi: String,              // e.g. "cp311", "abi3", "none"
-    pub compiler: Option<String>, // e.g. "msvc", "gcc", "clang"
-
+    pub python_version: String,                // e.g. "3.11"
+    pub platform: String,                      // e.g. "windows-x86_64", "linux-aarch64"
+    pub abi: String,                           // e.g. "cp311", "abi3", "none"
+    pub compiler: Option<String>,              // e.g. "msvc", "gcc", "clang"
     pub build_flags: BTreeMap<String, String>, // e.g. "WITH_SSL" => "ON"
 }
 

@@ -14,14 +14,9 @@ pub struct SystemEnvironmentInfo {
     pub abi_tag: String,
 }
 
-pub fn test() {
-    println!("Hello, world!");
-
+pub fn get_system_info() -> SystemEnvironmentInfo {
     let py = detect_python_version();
     let abi = detect_abi_tag().unwrap_or("None".to_string());
-
-    println!("python version: {:#?}", py);
-    println!("abi: {:#?}", abi);
 
     let system_env: SystemEnvironmentInfo = SystemEnvironmentInfo {
         platform: detect_platform().to_string(),
@@ -34,13 +29,17 @@ pub fn test() {
         system_env.platform, system_env.python_version, system_env.abi_tag
     );
 
+    return system_env;
+}
+
+pub fn get_build_tuple(name: &str, version: &str, system_env: SystemEnvironmentInfo) -> BuildTuple {
     let mut flags = BTreeMap::new();
     flags.insert("WITH_SSL".to_string(), "ON".to_string());
     flags.insert("ENABLE_THREADS".to_string(), "OFF".to_string());
 
     let tuple = BuildTuple {
-        package: "zlib".to_string(),
-        package_version: "1.2.13".to_string(),
+        package: name.to_string(),
+        package_version: version.to_string(),
         python_version: system_env.python_version,
         platform: system_env.platform,
         abi: system_env.abi_tag,
@@ -48,6 +47,8 @@ pub fn test() {
         build_flags: flags,
     };
 
-    println!("Build tuple: {:#?}", tuple);
-    println!("Cache key: {}", tuple.hash_key());
+    // println!("Build tuple: {:#?}", tuple);
+    // println!("Cache key: {}", tuple.hash_key());
+
+    return tuple;
 }

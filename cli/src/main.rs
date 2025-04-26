@@ -6,7 +6,7 @@ use serde::Serialize;
 // use std::fs::File;
 // use std::io::Write;
 
-use box_core::test;
+use box_core::{get_build_tuple, get_system_info};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -63,7 +63,7 @@ fn main() {
         dependencies: std::collections::HashMap::new(),
     };
 
-    test();
+    let system_info = get_system_info();
 
     // You can see how many times a particular flag or argument occurred
     // Note, only flags can have multiple occurrences
@@ -85,7 +85,7 @@ fn main() {
             }
         }
         Some(Commands::Add { name }) => {
-            let _ = add(name, manifest);
+            let _ = add(name, manifest, system_info);
         }
         Some(Commands::Install { path }) => {
             if *path {
@@ -138,9 +138,15 @@ fn main() {
     fn add(
         name: &Option<String>,
         mut manifest: Manifest,
+        system_info: box_core::SystemEnvironmentInfo,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(name) = name {
             println!("Adding... {}", name);
+
+            let pkg_tuple = get_build_tuple(name, "v1.0.0", system_info);
+
+            println!("Cache key: {}", pkg_tuple.hash_key());
+
             manifest
                 .dependencies
                 .insert(name.to_string(), "v1.0.0".to_string());
@@ -151,6 +157,8 @@ fn main() {
             std::fs::write("./temp/mypkg.toml", toml_string)?;
 
             println!("mypkg.toml written successfully.");
+
+            std::fs::create_dir_all("./temp/.box/cache/".to_string() + &pkg_tuple.hash_key())?;
         }
         Ok(())
     }
