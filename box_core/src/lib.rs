@@ -7,6 +7,13 @@ use crate::build_tuple::BuildTuple;
 mod system_resolver;
 use system_resolver::{detect_abi_tag, detect_platform, detect_python_version};
 
+use reqwest::blocking::get;
+use std::fs::File;
+use std::io::copy;
+
+use flate2::read::GzDecoder;
+use tar::Archive;
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SystemEnvironmentInfo {
     pub platform: String,
@@ -51,4 +58,39 @@ pub fn get_build_tuple(name: &str, version: &str, system_env: SystemEnvironmentI
     // println!("Cache key: {}", tuple.hash_key());
 
     return tuple;
+}
+
+pub fn download_source(url: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some((_, base)) = url.rsplit_once('/') {
+        println!("filename: {}", base);
+        // Perform the GET request
+        let response = get(url)?;
+
+        let file_path = format!("{}{}", path, base);
+
+        // Create a file to save the tarball
+        let mut out = File::create(&file_path)?;
+
+        // Stream the response into the file
+        let mut content = response;
+        copy(&mut content, &mut out)?;
+
+        println!("Downloaded to {}", file_path);
+        return Ok(file_path);
+    }
+    Err("couldn't get base comp of url".into())
+}
+
+pub fn extract_tar_gz(file_path: &str, output_dir: &str) -> std::io::Result<()> {
+    // Open the .tar.gz file
+    let file = File::open(file_path)?;
+    let decoder = GzDecoder::new(file);
+
+    // Create a tar Archive from the decompressed stream
+    let mut archive = Archive::new(decoder);
+
+    // Extract the archive to the specified directory
+    archive.unpack(output_dir)?;
+
+    Ok(())
 }

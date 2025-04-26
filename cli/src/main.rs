@@ -3,10 +3,8 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use serde::Serialize;
-// use std::fs::File;
-// use std::io::Write;
 
-use box_core::{get_build_tuple, get_system_info};
+use box_core::{download_source, extract_tar_gz, get_build_tuple, get_system_info};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -141,24 +139,44 @@ fn main() {
         system_info: box_core::SystemEnvironmentInfo,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(name) = name {
+            if !matches!(name.as_str(), "lz4" | "lz4-python") {
+                return Err("Invalid name".into());
+            }
+
             println!("Adding... {}", name);
 
-            let pkg_tuple = get_build_tuple(name, "v1.0.0", system_info);
+            let build_folder = "./temp/.box/build/";
+            let pkg_build_folder = build_folder.to_owned() + name + "/";
+            std::fs::create_dir_all(&pkg_build_folder)?;
 
-            println!("Cache key: {}", pkg_tuple.hash_key());
+            let dl_file_path = download_source(
+                "https://files.pythonhosted.org/packages/source/l/lz4/lz4-4.3.2.tar.gz",
+                &build_folder,
+            );
 
-            manifest
-                .dependencies
-                .insert(name.to_string(), "v1.0.0".to_string());
+            if dl_file_path.is_ok() {
+                let file_path = dl_file_path.unwrap();
+                println!("Download succeeded, file saved at: {}", file_path);
+                let _ = extract_tar_gz(&file_path, &pkg_build_folder);
+                let pkg_tuple = get_build_tuple(name, "v1.0.0", system_info);
 
-            let toml_string = toml::to_string_pretty(&manifest)?;
+                println!("Cache key: {}", pkg_tuple.hash_key());
 
-            // Write to a file
-            std::fs::write("./temp/mypkg.toml", toml_string)?;
+                manifest
+                    .dependencies
+                    .insert(name.to_string(), "v1.0.0".to_string());
 
-            println!("mypkg.toml written successfully.");
+                let toml_string = toml::to_string_pretty(&manifest)?;
 
-            std::fs::create_dir_all("./temp/.box/cache/".to_string() + &pkg_tuple.hash_key())?;
+                // Write to a file
+                std::fs::write("./temp/mypkg.toml", toml_string)?;
+
+                println!("mypkg.toml written successfully.");
+
+                std::fs::create_dir_all("./temp/.box/cache/".to_string() + &pkg_tuple.hash_key())?;
+            } else {
+                println!("Download failed.");
+            }
         }
         Ok(())
     }
