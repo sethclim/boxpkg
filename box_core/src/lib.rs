@@ -14,6 +14,13 @@ use std::io::copy;
 use flate2::read::GzDecoder;
 use tar::Archive;
 
+mod python_builder;
+use python_builder::{build_wheel, setup_python_env};
+
+use std::fs;
+use std::io;
+use std::path::Path;
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SystemEnvironmentInfo {
     pub platform: String,
@@ -60,7 +67,10 @@ pub fn get_build_tuple(name: &str, version: &str, system_env: SystemEnvironmentI
     return tuple;
 }
 
-pub fn download_source(url: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn download_source(
+    url: &str,
+    path: &str,
+) -> Result<(String, String), Box<dyn std::error::Error>> {
     if let Some((_, base)) = url.rsplit_once('/') {
         println!("filename: {}", base);
         // Perform the GET request
@@ -76,7 +86,7 @@ pub fn download_source(url: &str, path: &str) -> Result<String, Box<dyn std::err
         copy(&mut content, &mut out)?;
 
         println!("Downloaded to {}", file_path);
-        return Ok(file_path);
+        return Ok((file_path, base.to_string()));
     }
     Err("couldn't get base comp of url".into())
 }
@@ -91,6 +101,46 @@ pub fn extract_tar_gz(file_path: &str, output_dir: &str) -> std::io::Result<()> 
 
     // Extract the archive to the specified directory
     archive.unpack(output_dir)?;
+
+    Ok(())
+}
+
+pub fn create_venv_and_build(project_path: &str) {
+    let _ = setup_python_env(project_path);
+    let _ = build_wheel(project_path);
+}
+
+pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
+    let dist_dir = build_dir.join("dist");
+
+    // Check if dist/ exists
+    if !dist_dir.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "dist/ directory not found",
+        ));
+    }
+
+    // Find the first .whl file in dist/
+    let wheel_file = fs::read_dir(&dist_dir)?
+        .filter_map(Result::ok)
+        .find(|entry| {
+            entry
+                .path()
+                .extension()
+                .map(|ext| ext == "whl")
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No .whl file found in dist/"))?;
+
+    // Ensure cache dir exists
+    fs::create_dir_all(cache_dir)?;
+
+    // Build the destination path
+    let dest_path = cache_dir.join(wheel_file.file_name());
+
+    // Move (rename) the file
+    fs::rename(wheel_file.path(), dest_path)?;
 
     Ok(())
 }
