@@ -1,10 +1,8 @@
 ---
 name: Feature Addition
 about: Info outlining new feature
-title: ''
+title: ""
 labels: feature
 assignees: sethclim
-
+projects: ["sethclim/BoxPkg Project"]
 ---
-
-
