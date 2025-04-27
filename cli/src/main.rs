@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use serde::Serialize;
+use std::env;
 
 use box_core::{
     create_venv_and_build, download_source, extract_tar_gz, get_build_tuple, get_system_info,
@@ -45,6 +46,16 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
+    let dis = env::current_dir();
+
+    match dis {
+        Ok(dis) => {
+            println!("current_dir! {}", dis.display());
+        }
+        Err(e) => {
+            println!("Failed to check current_dir: {}", e);
+        }
+    }
 
     // You can check the value provided by positional arguments, or option arguments
     if let Some(name) = cli.name.as_deref() {
@@ -149,8 +160,10 @@ fn main() {
 
             println!("Adding... {}", name);
 
-            let build_folder = "./temp/.box/build/";
-            let pkg_build_folder = build_folder.to_owned() + name + "/";
+            let build_folder = std::path::Path::new("./temp/.box/build/");
+            let pkg_build_folder = build_folder.join(name);
+            println!("pkg_build_folder: {}", pkg_build_folder.display());
+
             std::fs::create_dir_all(&pkg_build_folder)?;
 
             let dl_res = download_source(
@@ -159,27 +172,43 @@ fn main() {
             );
 
             match dl_res {
-                Ok((dl_file_path, file_name)) => {
-                    println!("Download succeeded, file saved at: {}", dl_file_path);
-                    let _ = extract_tar_gz(&dl_file_path, &pkg_build_folder);
+                Ok(dl_file_path) => {
+                    println!(
+                        "Download succeeded, file saved at: {}",
+                        dl_file_path.display()
+                    );
+                    let _ = extract_tar_gz(&dl_file_path, &pkg_build_folder.as_path());
                     let pkg_tuple = get_build_tuple(name, "v1.0.0", system_info);
 
                     println!("Cache key: {}", pkg_tuple.hash_key());
 
-                    let unzipped_folder = file_name.replace(".tar.gz", "");
+                    let unzipped_folder = dl_file_path
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .map(|s| s.replace(".tar.gz", ""));
 
-                    let project_source_folder = format!("{}{}/", pkg_build_folder, unzipped_folder);
+                    let project_source_folder = if let Some(folder) = unzipped_folder {
+                        pkg_build_folder.join(folder)
+                    } else {
+                        // Handle missing unzipped_folder appropriately
+                        panic!("unzipped_folder was None!");
+                    };
 
                     let package_final_path =
-                        "./temp/.box/cache/".to_string() + &pkg_tuple.hash_key();
+                        Path::new("./temp/.box/cache/").join(&pkg_tuple.hash_key());
+
                     std::fs::create_dir_all(&package_final_path)?;
 
-                    let _ = move_wheel(
-                        Path::new(&project_source_folder),
-                        Path::new(&package_final_path),
+                    create_venv_and_build(&project_source_folder.as_path());
+
+                    println!("built successfully.");
+
+                    let move_res = move_wheel(
+                        project_source_folder.as_path(),
+                        package_final_path.as_path(),
                     );
 
-                    create_venv_and_build(&project_source_folder);
+                    println!("moved? {:?}", move_res);
 
                     manifest
                         .dependencies

@@ -2,19 +2,18 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
-pub fn setup_python_env(project_path: &str) -> Result<(), String> {
+pub fn setup_python_env(project_path: &Path) -> Result<(), String> {
     // Define the path to the Python virtual environment
-    let file_path = format!("{}{}/", project_path, "venv");
-    let venv_dir = Path::new(&file_path);
+    let venv_dir = project_path.join("venv");
 
     // Check if the virtual environment already exists
-    if !venv_dir.exists() {
+    if !&venv_dir.exists() {
         // Create the virtual environment if it doesn't exist
         println!("Creating virtual environment...");
         let status = Command::new("python")
             .arg("-m")
             .arg("venv")
-            .arg(venv_dir)
+            .arg(&venv_dir)
             .status()
             .map_err(|e| format!("Failed to create virtual environment: {}", e))?;
 
@@ -23,20 +22,18 @@ pub fn setup_python_env(project_path: &str) -> Result<(), String> {
         }
     }
 
-    let venv_path = file_path.to_owned() + "venv/";
-
     // Activate the virtual environment (platform-specific)
     println!("Activating virtual environment...");
     let activate_script = if cfg!(target_os = "windows") {
-        file_path.to_owned() + "venv\\Scripts\\activate.bat"
+        &venv_dir.join("Scripts").join("activate.bat")
     } else {
-        file_path.to_owned() + "venv/bin/activate"
+        &venv_dir.join("bin").join("activate")
     };
 
     // Use `source` for Unix or `activate.bat` for Windows
     let activate_status = Command::new("sh")
         .arg("-c")
-        .arg(format!("source {}", &activate_script))
+        .arg(format!("source {}", &activate_script.display()))
         .status()
         .map_err(|e| format!("Failed to activate environment: {}", e))?;
 
@@ -55,13 +52,13 @@ pub fn setup_python_env(project_path: &str) -> Result<(), String> {
             .arg("wheel")
             .arg("build")
             // Set the environment variable for the virtual environment
-            .env("VIRTUAL_ENV", &venv_path) // This is the path to the venv
+            .env("VIRTUAL_ENV", venv_dir.display().to_string()) // This is the path to the venv
             // Update PATH to include the virtual environment's Scripts directory
             .env(
                 "PATH",
                 format!(
                     "{}/Scripts;{}",
-                    &venv_path,
+                    &venv_dir.display().to_string(),
                     std::env::var("PATH").expect("string")
                 ),
             );
@@ -74,13 +71,13 @@ pub fn setup_python_env(project_path: &str) -> Result<(), String> {
             .arg("wheel")
             .arg("build")
             // Set the environment variable for the virtual environment
-            .env("VIRTUAL_ENV", &venv_path) // This is the path to the venv
+            .env("VIRTUAL_ENV", &venv_dir.display().to_string()) // This is the path to the venv
             // Update PATH to include the virtual environment's binary directory
             .env(
                 "PATH",
                 format!(
                     "{}/bin:{}",
-                    &venv_path,
+                    &venv_dir.display().to_string(),
                     std::env::var("PATH").expect("string")
                 ),
             ); // Unix-based systems
@@ -97,28 +94,41 @@ pub fn setup_python_env(project_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_wheel(project_path: &str) -> Result<(), String> {
-    let project_dir = Path::new(project_path);
+pub fn build_wheel(project_path: &Path) -> Result<(), String> {
+    let dis = env::current_dir();
 
-    // Ensure the project path exists
-    if !project_dir.exists() {
-        return Err(format!("Directory not found: {}", project_path));
+    match dis {
+        Ok(dis) => {
+            println!("current_dir! {}", dis.display());
+            // Ensure the project path exists
+            if !project_path.exists() {
+                return Err(format!("Directory not found: {}", project_path.display()));
+            }
+
+            // Change to the project directory
+            env::set_current_dir(project_path).map_err(|e| e.to_string())?;
+
+            // Run the build command for the Python wheel
+            let status = Command::new("python")
+                .arg("-m")
+                .arg("build")
+                .status()
+                .map_err(|e| format!("Failed to run wheel build: {}", e))?;
+
+            if !status.success() {
+                return Err("Wheel build failed".to_string());
+            }
+
+            println!("Wheel build successful, check the 'dist/' directory.");
+
+            // Change to the project directory
+            println!("current_dir! {}", dis.display());
+            env::set_current_dir(dis).map_err(|e| e.to_string())?;
+        }
+        Err(e) => {
+            println!("Failed to check current_dir: {}", e);
+        }
     }
 
-    // Change to the project directory
-    env::set_current_dir(project_dir).map_err(|e| e.to_string())?;
-
-    // Run the build command for the Python wheel
-    let status = Command::new("python")
-        .arg("-m")
-        .arg("build")
-        .status()
-        .map_err(|e| format!("Failed to run wheel build: {}", e))?;
-
-    if !status.success() {
-        return Err("Wheel build failed".to_string());
-    }
-
-    println!("Wheel build successful, check the 'dist/' directory.");
     Ok(())
 }
