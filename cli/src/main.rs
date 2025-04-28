@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use box_core::create_python_env;
+use box_core::install_wheel;
 use clap::{Parser, Subcommand};
 
 use serde::Serialize;
@@ -102,7 +104,7 @@ fn main() {
         }
         Some(Commands::Install { path }) => {
             if *path {
-                println!("installing...");
+                install();
             } else {
                 println!("Not installing...");
             }
@@ -227,5 +229,19 @@ fn main() {
             }
         }
         Ok(())
+    }
+
+    fn install() {
+        println!("installing...");
+        let project_box_path = Path::new("./temp/.box/");
+        let _ = create_python_env(&project_box_path);
+        println!("create_python_env finished!");
+        let project_box_path_venv = Path::new("./temp/.box/venv/");
+        let _ = install_wheel(
+            &project_box_path_venv,
+            Path::new(
+                "./temp/.box/cache/acd4ab807665d6dac47a99aa6aad094e091fa934ec3f7e56f3878c5f559dd6af/lz4-4.3.2-cp312-cp312-win_amd64.whl",
+            ),
+        );
     }
 }

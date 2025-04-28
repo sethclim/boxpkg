@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::process::Command;
 
 mod build_tuple;
 
@@ -163,4 +164,37 @@ pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn install_wheel(
+    venv_path: &Path,
+    wheel_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Path to the virtual env's Python executable
+    let mut python_executable = venv_path.join("bin").join("python");
+    if cfg!(target_os = "windows") {
+        python_executable = venv_path.join("Scripts").join("python.exe"); // Windows
+    }
+    println!("python_executable {}", python_executable.display());
+    println!("wheel_path.to_str() {}", wheel_path.to_str().unwrap());
+    // Run: python -m pip install /path/to/wheel.whl
+    let status = Command::new(python_executable)
+        .args(["-m", "pip", "install", wheel_path.to_str().unwrap()])
+        .status()
+        .expect("pip install failed");
+
+    println!("status {}", status.code().expect("FAIL"));
+
+    if !status.success() {
+        println!("Failed to install wheel {}", wheel_path.display());
+        return Err("Failed to install wheel".into());
+    } else {
+        println!("python_executable {} installed", wheel_path.display());
+    }
+
+    Ok(())
+}
+
+pub fn create_python_env(project_path: &Path) {
+    let _ = setup_python_env(project_path);
 }
