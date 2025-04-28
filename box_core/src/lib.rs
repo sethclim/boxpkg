@@ -109,9 +109,11 @@ pub fn create_venv_and_build(project_path: &Path) {
     let _ = build_wheel(project_path);
 }
 
-pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
+pub fn move_wheel(
+    build_dir: &Path,
+    cache_dir: &Path,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let dist_dir = build_dir.join("dist/").canonicalize();
-
     match dist_dir {
         Ok(dist_dir) => {
             println!("dist_dir {:?} ", dist_dir.display());
@@ -119,10 +121,10 @@ pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
             // Check if dist/ exists
             if !dist_dir.exists() {
                 println!("! dist_dir exists");
-                return Err(io::Error::new(
+                return Err(Box::new(io::Error::new(
                     io::ErrorKind::NotFound,
                     "dist/ directory not found",
-                ));
+                )));
             }
 
             println!("dist_dir.exists ");
@@ -149,7 +151,7 @@ pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
             // Build the destination path
             let dest_path = cache_dir.join(wheel_file.file_name());
 
-            // Move (rename) the file
+            // Move the file
             fs::rename(wheel_file.path(), &dest_path)?;
 
             println!(
@@ -157,13 +159,12 @@ pub fn move_wheel(build_dir: &Path, cache_dir: &Path) -> io::Result<()> {
                 wheel_file.path().to_str(),
                 &dest_path.to_str()
             );
+            return Ok(dest_path);
         }
         Err(e) => {
-            eprintln!("Error occurred: {}", e);
+            return Err(Box::new(e));
         }
     }
-
-    Ok(())
 }
 
 pub fn install_wheel(
