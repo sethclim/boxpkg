@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+flate2 = "1.1.1"
 os_info = "3.10.0"
+reqwest = { version = "0.12.15", features = ["blocking"] }
 sha2 = "0.10.8"
+tar = "0.4.44"
